@@ -170,15 +170,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // APARCAR
   btnAparcar.addEventListener('click', () => {
-    if (ultimaLatUser) {
-      guardarAparcamiento(ultimaLatUser, ultimaLngUser);
-      return;
-    }
-
-    // No tenemos ubicación aún, forzamos getCurrentPosition con loading
     Swal.fire({
       title: 'Obteniendo GPS...',
-      text: 'Por favor, espera o acepta los permisos.',
+      text: 'Buscando tu ubicación...',
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading();
@@ -202,19 +196,28 @@ document.addEventListener("DOMContentLoaded", function () {
         guardarAparcamiento(ultimaLatUser, ultimaLngUser);
       },
       (err) => {
-        // Fallback si el usuario denegó GPS o falló definitivamente
+        Swal.close();
+        let errorMsg = 'No hemos podido obtener tu ubicación exacta.';
+        if (err.code === 1) errorMsg = 'No has dado permiso de ubicación o está bloqueado.';
+
+        // Fallback pidiendo permiso al usuario para usar la vista actual
         Swal.fire({
           icon: 'warning',
-          title: 'Sin GPS activado',
-          text: 'No hemos podido obtener tu ubicación. Usando el centro del mapa.',
-          timer: 3000,
-          showConfirmButton: false
+          title: 'Sin GPS detectado',
+          text: errorMsg + ' ¿Quieres aparcar el coche en el centro de la pantalla actual?',
+          showCancelButton: true,
+          confirmButtonText: 'Sí, aparcar aquí',
+          cancelButtonText: 'Reintentar'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            ultimaLatUser = map.getCenter().lat;
+            ultimaLngUser = map.getCenter().lng;
+            guardarAparcamiento(ultimaLatUser, ultimaLngUser);
+          }
         });
-        ultimaLatUser = map.getCenter().lat;
-        ultimaLngUser = map.getCenter().lng;
-        guardarAparcamiento(ultimaLatUser, ultimaLngUser);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      // Usar timeout más largo y quitar la alta precisión forzosa para evitar que falle en interiores
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
     );
   });
 
