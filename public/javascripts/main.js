@@ -170,25 +170,58 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // APARCAR
   btnAparcar.addEventListener('click', () => {
-    if (!ultimaLatUser) {
-      // Si falla el GPS, que pueda aparcar igual (usar el centro del mapa)
-      ultimaLatUser = map.getCenter().lat;
-      ultimaLngUser = map.getCenter().lng;
-      Swal.fire({
-          icon: 'warning',
-          title: 'Sin GPS de alta precisión',
-          text: 'Usando centro de pantalla para geolocalizar el coche.',
-          toast: true,
-          position: 'top',
-          timer: 3000,
-          showConfirmButton: false
-      });
+    if (ultimaLatUser) {
+      guardarAparcamiento(ultimaLatUser, ultimaLngUser);
+      return;
     }
 
-    // Registrar posición del coche
+    // No tenemos ubicación aún, forzamos getCurrentPosition con loading
+    Swal.fire({
+      title: 'Obteniendo GPS...',
+      text: 'Por favor, espera o acepta los permisos.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        Swal.close();
+        ultimaLatUser = pos.coords.latitude;
+        ultimaLngUser = pos.coords.longitude;
+        
+        // Centramos el mapa en el usuario
+        if (!userMarker) {
+          userMarker = L.marker([ultimaLatUser, ultimaLngUser], { icon: userIcon }).addTo(map);
+        } else {
+          userMarker.setLatLng([ultimaLatUser, ultimaLngUser]);
+        }
+        map.setView([ultimaLatUser, ultimaLngUser], 17);
+
+        guardarAparcamiento(ultimaLatUser, ultimaLngUser);
+      },
+      (err) => {
+        // Fallback si el usuario denegó GPS o falló definitivamente
+        Swal.fire({
+          icon: 'warning',
+          title: 'Sin GPS activado',
+          text: 'No hemos podido obtener tu ubicación. Usando el centro del mapa.',
+          timer: 3000,
+          showConfirmButton: false
+        });
+        ultimaLatUser = map.getCenter().lat;
+        ultimaLngUser = map.getCenter().lng;
+        guardarAparcamiento(ultimaLatUser, ultimaLngUser);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+
+  function guardarAparcamiento(lat, lng) {
     estado.aparcamientoActual = {
-      lat: ultimaLatUser,
-      lng: ultimaLngUser,
+      lat: lat,
+      lng: lng,
       time: Date.now()
     };
     guardarEstado();
@@ -202,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     mostrarModoAparcado();
-  });
+  }
 
   // FINALIZAR APARCAMIENTO
   btnFinalizar.addEventListener('click', () => {
