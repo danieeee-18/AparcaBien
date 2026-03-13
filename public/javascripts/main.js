@@ -198,13 +198,15 @@ document.addEventListener("DOMContentLoaded", function () {
       (err) => {
         Swal.close();
         let errorMsg = 'No hemos podido obtener tu ubicación exacta.';
-        if (err.code === 1) errorMsg = 'No has dado permiso de ubicación o está bloqueado.';
+        if (err.code === 1) {
+          errorMsg = 'Has denegado el permiso de ubicación. Toca el 🔒 en la barra de direcciones de tu navegador y dale a "Permitir ubicación".';
+        }
 
         // Fallback pidiendo permiso al usuario para usar la vista actual
         Swal.fire({
           icon: 'warning',
-          title: 'Sin GPS detectado',
-          text: errorMsg + ' ¿Quieres aparcar el coche en el centro de la pantalla actual?',
+          title: 'Permiso Denegado / Sin GPS',
+          text: errorMsg + ' ¿Quieres aparcar el vehículo manualmente en el centro del mapa?',
           showCancelButton: true,
           confirmButtonText: 'Sí, aparcar aquí',
           cancelButtonText: 'Reintentar'
